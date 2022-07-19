@@ -28,11 +28,17 @@ my_lib_cheri.so:
 my_lib_hybrid.so:
 	$(CC_HYBRID) -I$(WASM2C_ROOT) -shared -fPIC -O3 my_lib.wasm.c -o my_lib.so  $(WASM2C_ROOT)/wasm2c/wasm-rt-impl.c $(WASM2C_ROOT)/wasm2c/wasm-rt-os-unix.c $(WASM2C_ROOT)/wasm2c/wasm-rt-os-win.c $(WASM2C_ROOT)/wasm2c/wasm-rt-wasi.c -I$(WASM2C_ROOT)/wasm2c/
 
+my_lib.o: lib.c lib.h
+	clang lib.c -c -o my_lib.o
+	
 
 
+microbenchmarks_wasm2c: my_lib.so microbenchmarks.cpp
+	$(CXX_PURE) -std=c++17 -DWASM2C_SANDBOX microbenchmarks.cpp -o microbenchmarks_wasm2c -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -I $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c/ -pthread -ldl
 
-microbenchmarks: my_lib.so microbenchmarks.cpp
-	$(CXX_PURE) -std=c++17 microbenchmarks.cpp -o microbenchmarks -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -I $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c/ -pthread -ldl
+microbenchmarks_noop: microbenchmarks.cpp my_lib.o
+	$(CXX_PURE) -std=c++17 -DNOOP_SANDBOX microbenchmarks.cpp my_lib.o -o microbenchmarks_noop -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -I $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c/ -pthread -ldl 
+
 
 microbenchmarks_cheri: 
 	$(CXX_PURE) -std=c++17 microbenchmarks.cpp -o microbenchmarks -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -I $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c/ -pthread -ldl

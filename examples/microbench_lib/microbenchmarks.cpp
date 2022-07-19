@@ -7,10 +7,25 @@
 #include <assert.h>
 #include <fstream>
 #define RLBOX_SINGLE_THREADED_INVOCATIONS
-#include "rlbox_wasm2c_sandbox.hpp"
+#ifdef NOOP_SANDBOX 
+    #define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
+#endif
 #include "rlbox.hpp"
 
-typedef rlbox::rlbox_sandbox<rlbox::rlbox_wasm2c_sandbox> wasm2c_sbox;
+
+
+#if defined(WASM2C_SANDBOX)
+    #include "rlbox_wasm2c_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_wasm2c_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
+#elif defined(NOOP_SANDBOX)
+    #include "rlbox_noop_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_noop_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
+#else 
+    static_assert(false, "No sandbox type defined");
+#endif
+
 
 
 #if defined(__ARM_ARCH) && __ARM_ARCH >= 6
@@ -89,7 +104,7 @@ uint64_t get_ctr_overhead(uint64_t iterations) {
     return result;
 }
 
-uint64_t bench_empty_0args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_0args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -101,7 +116,7 @@ uint64_t bench_empty_0args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t c
     return ctr;
 }
 
-uint64_t bench_empty_2args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_2args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -113,7 +128,7 @@ uint64_t bench_empty_2args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t c
     return ctr;
 }
 
-uint64_t bench_empty_4args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_4args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -125,7 +140,7 @@ uint64_t bench_empty_4args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t c
     return ctr;
 }
 
-uint64_t bench_empty_6args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_6args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -137,7 +152,7 @@ uint64_t bench_empty_6args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t c
     return ctr;
 }
 
-uint64_t bench_empty_8args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_8args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -149,7 +164,7 @@ uint64_t bench_empty_8args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t c
     return ctr;
 }
 
-uint64_t bench_empty_10args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_10args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -161,7 +176,7 @@ uint64_t bench_empty_10args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t 
     return ctr;
 }
 
-uint64_t bench_empty_12args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
+uint64_t bench_empty_12args(sbox_t& sandbox, uint64_t iterations, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     for(int idx = 0; idx < iterations; idx++){
         uint64_t start = start_timer(); 
@@ -173,7 +188,7 @@ uint64_t bench_empty_12args(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t 
     return ctr;
 }
 
-uint64_t bench_data_transfer(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t sz, uint64_t ctr_overhead) {
+uint64_t bench_data_transfer(sbox_t& sandbox, uint64_t iterations, uint64_t sz, uint64_t ctr_overhead) {
     uint64_t ctr = 0;
     // get host-space buf to copy to sandbox
     char* buf = (char*)malloc(sz); 
@@ -189,7 +204,7 @@ uint64_t bench_data_transfer(wasm2c_sbox& sandbox, uint64_t iterations, uint64_t
     return ctr;
 }
 
-auto copy_str_to_sandbox(wasm2c_sbox& sandbox, char* str){
+auto copy_str_to_sandbox(sbox_t& sandbox, char* str){
     size_t str_size = strlen(str) + 1;
     auto str_tainted = sandbox.malloc_in_sandbox<char>(str_size);
     // copy to sandbox
@@ -204,8 +219,9 @@ void print_result_row(std::ofstream& outstream, std::string benchname, uint64_t 
 
 int main(int argc, char const *argv[])
 {
-    wasm2c_sbox sandbox;
-    sandbox.create_sandbox("./my_lib.so");
+    sbox_t sandbox;
+    CREATE_SANDBOX(sandbox, "./my_lib.so")
+    //sandbox.create_sandbox("./my_lib.so");
 
     // check for input from command line
     if (argc != 2) {
