@@ -1,0 +1,3 @@
+[submodule "cheri_rlbox"]
+	path = cheri_rlbox
+	url = git@github.com:PLSysSec/cheri_rlbox.git
