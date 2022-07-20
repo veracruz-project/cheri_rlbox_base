@@ -22,6 +22,10 @@
     #include "rlbox_noop_sandbox.hpp"
     typedef rlbox::rlbox_sandbox<rlbox::rlbox_noop_sandbox> sbox_t;
     #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
+#elif defined(CHERI_BSP_SANDBOX)
+    #include "rlbox_cheri_bsp_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_bsp_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
 #else 
     static_assert(false, "No sandbox type defined");
 #endif
@@ -219,15 +223,18 @@ void print_result_row(std::ofstream& outstream, std::string benchname, uint64_t 
 
 int main(int argc, char const *argv[])
 {
-    sbox_t sandbox;
-    CREATE_SANDBOX(sandbox, "./my_lib.so")
-    //sandbox.create_sandbox("./my_lib.so");
 
     // check for input from command line
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <output path>" << std::endl;
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << "<path to dynamic library> <output path>" << std::endl;
         return 1;
     }
+
+    sbox_t sandbox;
+    CREATE_SANDBOX(sandbox, argv[1])
+    //sandbox.create_sandbox("./my_lib.so");
+
+
 
  
 
@@ -283,7 +290,7 @@ int main(int argc, char const *argv[])
     sandbox.destroy_sandbox();
 
     std::ofstream outfile;
-    outfile.open(argv[1]);
+    outfile.open(argv[2]);
 
     // Output Results
     std::cout << "Bench name | total | average (Counter overhead = " << ctr_overhead << ", iterations = " << iterations << ")" << std::endl;
