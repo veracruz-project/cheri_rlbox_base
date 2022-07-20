@@ -31,6 +31,8 @@ my_lib_hybrid.so:
 my_lib.o: lib.c lib.h
 	clang lib.c -c -o my_lib.o
 	
+my_lib_native.so: lib.c lib.h 
+	$(CXX_PURE) --shared -fPIC lib.c -o my_lib_native.so
 
 
 microbenchmarks_wasm2c: my_lib.so microbenchmarks.cpp
@@ -38,6 +40,9 @@ microbenchmarks_wasm2c: my_lib.so microbenchmarks.cpp
 
 microbenchmarks_noop: microbenchmarks.cpp my_lib.o
 	$(CXX_PURE) -std=c++17 -DNOOP_SANDBOX microbenchmarks.cpp my_lib.o -o microbenchmarks_noop -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -I $(RLBOX_ROOT)/build/_deps/mod_wasm2c-src/wasm2c/ -pthread -ldl 
+
+microbenchmarks_cheri_bsp: my_lib_native.so microbenchmarks.cpp
+	$(CXX_PURE) -std=c++17 -DCHERI_BSP_SANDBOX microbenchmarks.cpp -g -o microbenchmarks_cheri_bsp -I $(RLBOX_ROOT)/build/_deps/rlbox-src/code/include -I $(RLBOX_ROOT)/include -pthread -ldl
 
 
 microbenchmarks_cheri: 
