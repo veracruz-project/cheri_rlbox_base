@@ -10,6 +10,9 @@
 #ifdef NOOP_SANDBOX 
     #define RLBOX_USE_STATIC_CALLS() rlbox_noop_sandbox_lookup_symbol
 #endif
+#ifdef CHERI_NOOP_SANDBOX 
+    #define RLBOX_USE_STATIC_CALLS() rlbox_cheri_noop_sandbox_lookup_symbol
+#endif
 #include "rlbox.hpp"
 
 
@@ -22,9 +25,13 @@
     #include "rlbox_noop_sandbox.hpp"
     typedef rlbox::rlbox_sandbox<rlbox::rlbox_noop_sandbox> sbox_t;
     #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
-#elif defined(CHERI_BSP_SANDBOX)
-    #include "rlbox_cheri_bsp_sandbox.hpp"
-    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_bsp_sandbox> sbox_t;
+#elif defined(CHERI_NOOP_SANDBOX)
+    #include "rlbox_cheri_noop_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_noop_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
+#elif defined(CHERI_DYLIB_SANDBOX)
+    #include "rlbox_cheri_dylib_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_dylib_sandbox> sbox_t;
     #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
 #else 
     static_assert(false, "No sandbox type defined");
@@ -33,37 +40,23 @@
 
 
 #if defined(__ARM_ARCH) && __ARM_ARCH >= 6
+
+// might need to use a kernel module to enable access to these counters
+
+// temporarily disabled while I test functionality
 // aarch64 cycle counter
 inline uint64_t start_timer(void){
-  uint32_t pmccntr;
-  uint32_t pmuseren;
-  uint32_t pmcntenset;
-  // Read the user mode perf monitor counter access permissions.
-  asm volatile("mrc p15, 0, %0, c9, c14, 0" : "=r"(pmuseren));
-  if (pmuseren & 1) {  // Allows reading perfmon counters for user mode code.
-    asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset));
-    if (pmcntenset & 0x80000000ul) {  // Is it counting?
-      asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
-      // The counter is set up to count every 64th cycle
-      return static_cast<int64_t>(pmccntr) * 64;  // Should optimize to << 6
-    }
-  }
+    return 0;
+ 	// uint64_t val;
+	// asm volatile("mrs %0, pmccntr_el0" : "=r"(val));
+	// return val;
 }
 
 inline uint64_t end_timer(void){
-  uint32_t pmccntr;
-  uint32_t pmuseren;
-  uint32_t pmcntenset;
-  // Read the user mode perf monitor counter access permissions.
-  asm volatile("mrc p15, 0, %0, c9, c14, 0" : "=r"(pmuseren));
-  if (pmuseren & 1) {  // Allows reading perfmon counters for user mode code.
-    asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset));
-    if (pmcntenset & 0x80000000ul) {  // Is it counting?
-      asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
-      // The counter is set up to count every 64th cycle
-      return static_cast<int64_t>(pmccntr) * 64;  // Should optimize to << 6
-    }
-  }
+ 	// uint64_t val;
+    return 0;
+	// asm volatile("mrs %0, pmccntr_el0" : "=r"(val));
+	//return val;
 }
 
 #elif defined(__x86_64__) || defined(__amd64__)
@@ -240,7 +233,7 @@ int main(int argc, char const *argv[])
 
 	
 
-    uint64_t iterations = 100000;
+    uint64_t iterations = 10;
     auto ctr_overhead = get_ctr_overhead(iterations);
 
     // Benchmark control-flow transfers
