@@ -33,6 +33,10 @@
     #include "rlbox_cheri_dylib_sandbox.hpp"
     typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_dylib_sandbox> sbox_t;
     #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
+#elif defined(CHERI_MSWASM_SANDBOX)
+    #include "rlbox_cheri_mswasm_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_mswasm_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
 #else 
     static_assert(false, "No sandbox type defined");
 #endif
