@@ -7,8 +7,12 @@ CXX=clang++
 
 # Tool-root definitions
 # TODO: prebuilt morello-sdk binaries?
-MORELLO_SDK_ROOT:=/home/evan/cheri/output/morello-sdk
+MORELLO_SDK_ROOT:=/usr/local/home/evan/cheri/output/morello-sdk
 RLBOX_ROOT:=../../cheri_rlbox
+
+# TODO: change these paths and add them formally to repo
+RWASM_ROOT?=../../../witchcraft
+MSWASM_SDK_ROOT?=../../../mswasm-wasi-sdk
 
 # Morello cross-compilation definitions
 MORELLO_CC=$(MORELLO_SDK_ROOT)/bin/clang
@@ -29,6 +33,16 @@ WASM2C_ROOT=./$(RLBOX_ROOT)/build/_deps/mod_wasm2c-src
 WASM2C_ADDINS=$(WASM2C_ROOT)/wasm2c/wasm-rt-impl.c $(WASM2C_ROOT)/wasm2c/wasm-rt-os-unix.c $(WASM2C_ROOT)/wasm2c/wasm-rt-os-win.c $(WASM2C_ROOT)/wasm2c/wasm-rt-wasi.c -I$(WASM2C_ROOT)/wasm2c/
 WASI_SDK_FLAGS=-Wl,--export-all -Wl,--growable-table -Wl,--no-entry
 
+
+
+# mswasm paths
+RWASM=$(RWASM_ROOT)/target/debug/rwasm
+MSWASM_INSTALL=$(MSWASM_SDK_ROOT)/build/install/opt/wasi-sdk/
+MSWASM_CC:=$(MSWASM_INSTALL)/bin/clang
+MSWASM_CXX:=$(MSWASM_INSTALL)/bin/clang++
+MSWASM_SYSROOT:=$(MSWASM_INSTALL)/share/wasi-sysroot
+
+RWASM_FLAGS=--wasi-library --ms-wasm --cheri
 
 # CC_HYBRID=clang -march=morello
 # CXX_HYBRID=clang++ -march=morello
@@ -69,7 +83,7 @@ my_lib_cheri.o: lib.c lib.h
 
 # Compile dynamic library in purecap mode for cheri-dylib
 my_lib_cheri.so: lib.c lib.h 
-	$(MORELLO_CC) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) --shared -fPIC lib.c -o my_lib_cheri.so
+	$(MORELLO_CC) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) -lm --shared -fPIC lib.c -o my_lib_cheri.so
 
 # 1a) Morello noop pure => pure
 microbenchmarks_cheri_pure_noop: my_lib_cheri.o microbenchmarks.cpp
@@ -90,6 +104,31 @@ microbenchmarks_cheri_hybrid_dylib: my_lib_cheri.so microbenchmarks.cpp
 cheri_libs: microbenchmarks_cheri_pure_noop microbenchmarks_cheri_pure_dylib microbenchmarks_cheri_hybrid_dylib
 
 
+
+#########################3 Cross-compiled Cheri MSWasm build ##########################
+
+# my_lib.mswasm: lib.c lib.h
+# 	$(MSWASM_CC) --sysroot $(MSWASM_SYSROOT) $(RLBOX_ROOT)/c_src/wasm2c_sandbox_wrapper.c -c -o wasm2c_sandbox_wrapper.o
+# 	$(MSWASM_CXX) --sysroot $(MSWASM_SYSROOT) lib.c wasm2c_sandbox_wrapper.o -o my_lib.wasm  $(WASI_SDK_FLAGS) 
+
+my_lib.mswasm: lib.c lib.h
+	$(MSWASM_CC) --target=wasm32-wasi --sysroot $(MSWASM_SYSROOT) $(RLBOX_ROOT)/c_src/wasm2c_sandbox_wrapper.c -c -o mswasm_sandbox_wrapper.o
+	$(MSWASM_CC) --target=wasm32-wasi --sysroot $(MSWASM_SYSROOT) lib.c mswasm_sandbox_wrapper.o -o my_lib.mswasm  
+
+my_lib.mswasm.c: my_lib.mswasm
+	$(RWASM) $(RWASM_FLAGS) my_lib.mswasm  my_lib.mswasm
+
+# my_lib_wasm2c.so: my_lib.wasm.c 
+# 	$(CC) -I$(WASM2C_ROOT) -shared -fPIC -O3 my_lib.wasm.c -o my_lib.so  $(WASM2C_ADDINS)
+my_lib_mswasm_cheri.so: my_lib.mswasm.c 
+	$(MORELLO_CC) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) --shared -fPIC my_lib.mswasm.c -o my_lib_mswasm_cheri.so
+
+# Morello mswasm pure => pure
+microbenchmarks_cheri_mswasm: my_lib_cheri.so microbenchmarks.cpp
+	$(MORELLO_CXX) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) -std=c++17 -DCHERI_DYLIB_SANDBOX microbenchmarks.cpp -o $@ $(RLBOX_INCLUDES) -pthread -ldl
+
+
+
 clean:
 	-rm -f my_lib.wasm 
 	-rm -f my_lib.wasm.c 
@@ -105,3 +144,9 @@ clean:
 	-rm -f microbenchmarks_cheri_pure_dylib 
 	-rm -f microbenchmarks_cheri_hybrid_noop 
 	-rm -f microbenchmarks_cheri_hybrid_dylib 
+	-rm -f mswasm_sandbox_wrapper.o
+	-rm -f my_lib.mswasm
+	-rm -f my_lib.mswasm.c
+	-rm -f my_lib.mswasm.h
+	-rm -f microbenchmarks_cheri_mswasm
+
