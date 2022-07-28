@@ -124,7 +124,7 @@ my_lib_mswasm_cheri.so: my_lib.mswasm.c
 	$(MORELLO_CC) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) --shared -fPIC my_lib.mswasm.c -o my_lib_mswasm_cheri.so
 
 # Morello mswasm pure => pure
-microbenchmarks_cheri_mswasm: my_lib_cheri.so microbenchmarks.cpp
+microbenchmarks_cheri_mswasm: my_lib_mswasm_cheri.so microbenchmarks.cpp
 	$(MORELLO_CXX) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) -std=c++17 -DCHERI_DYLIB_SANDBOX microbenchmarks.cpp -o $@ $(RLBOX_INCLUDES) -pthread -ldl
 
 
@@ -148,5 +148,6 @@ clean:
 	-rm -f my_lib.mswasm
 	-rm -f my_lib.mswasm.c
 	-rm -f my_lib.mswasm.h
+	-rm -f my_lib_mswasm_cheri.so
 	-rm -f microbenchmarks_cheri_mswasm
 
