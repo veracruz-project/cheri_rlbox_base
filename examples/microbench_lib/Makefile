@@ -1,4 +1,4 @@
-.PHONY: clean dir all_mswasm
+.PHONY: clean dir all_mswasm all_wasm2c
 
 include ../Makefile.inc
 
@@ -16,7 +16,9 @@ build/my_lib.wasm: lib.c lib.h dir
 	$(WASI_SDK_ROOT)/bin/clang++ --sysroot $(WASI_SDK_ROOT)/share/wasi-sysroot/ lib.c build/wasm2c_sandbox_wrapper.o -o $@  $(WASI_SDK_FLAGS)
 
 build/my_lib.wasm.c: build/my_lib.wasm
-	$(WASM2C_ROOT)/bin/wasm2c $< -o $@
+	$(WASM2C_ROOT)/bin/wasm2c $< -o my_lib.wasm.c 
+	mv my_lib.wasm.c build
+	mv my_lib.wasm.h build
 	
 $(OUTDIR)/my_lib_wasm2c.so: build/my_lib.wasm.c 
 	$(CC) -I$(WASM2C_ROOT) -shared -fPIC -O3 $< -o $@  $(WASM2C_ADDINS)
@@ -34,6 +36,7 @@ $(OUTDIR)/microbenchmarks_wasm2c: $(OUTDIR)/my_lib_wasm2c.so microbenchmarks.cpp
 $(OUTDIR)/microbenchmarks_noop: build/my_lib.o microbenchmarks.cpp
 	$(CXX) -std=c++17 -DNOOP_SANDBOX microbenchmarks.cpp $< -o $@ $(RLBOX_INCLUDES) $(WASM2C_INCLUDES) $(RLBOX_FLAGS)
 
+all_wasm2c: $(OUTDIR)/microbenchmarks_noop $(OUTDIR)/microbenchmarks_wasm2c
 
 #################### Cross-compiled Cheri builds ##############################
 

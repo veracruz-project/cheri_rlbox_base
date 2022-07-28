@@ -18,7 +18,7 @@
 
 
 #if defined(WASM2C_SANDBOX)
-    #include "rlbox_wasm2c_sandbox.hpp"
+    #include "wasm2c/impl.hpp"
     typedef rlbox::rlbox_sandbox<rlbox::rlbox_wasm2c_sandbox> sbox_t;
     #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
 #elif defined(NOOP_SANDBOX)
