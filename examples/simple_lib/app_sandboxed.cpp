@@ -4,10 +4,31 @@
 #include <cstring>
 #include <string>
 #define RLBOX_SINGLE_THREADED_INVOCATIONS
-#include "rlbox_wasm2c_sandbox.hpp"
 #include "rlbox.hpp"
 
-
+#if defined(WASM2C_SANDBOX)
+    #include "rlbox_wasm2c_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_wasm2c_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
+#elif defined(NOOP_SANDBOX)
+    #include "rlbox_noop_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_noop_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
+#elif defined(CHERI_NOOP_SANDBOX)
+    #include "rlbox_cheri_noop_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_noop_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(); // if noop sandbox, throw path away
+#elif defined(CHERI_DYLIB_SANDBOX)
+    #include "rlbox_cheri_dylib_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_dylib_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
+#elif defined(CHERI_MSWASM_SANDBOX)
+    #include "rlbox_cheri_mswasm_sandbox.hpp"
+    typedef rlbox::rlbox_sandbox<rlbox::rlbox_cheri_mswasm_sandbox> sbox_t;
+    #define CREATE_SANDBOX(sbox, path) sbox.create_sandbox(path);
+#else 
+    static_assert(false, "No sandbox type defined");
+#endif
 
 //Callback on completion of library function
 // void on_completion(char* result) {
