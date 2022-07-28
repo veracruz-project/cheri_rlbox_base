@@ -52,19 +52,13 @@ cheri_libs: microbenchmarks_cheri_pure_noop microbenchmarks_cheri_pure_dylib mic
 
 #########################Cross-compiled Cheri MSWasm build ##########################
 
-# my_lib.mswasm: lib.c lib.h
-# 	$(MSWASM_CC) --sysroot $(MSWASM_SYSROOT) $(RLBOX_ROOT)/c_src/wasm2c_sandbox_wrapper.c -c -o wasm2c_sandbox_wrapper.o
-# 	$(MSWASM_CXX) --sysroot $(MSWASM_SYSROOT) lib.c wasm2c_sandbox_wrapper.o -o my_lib.wasm  $(WASI_SDK_FLAGS) 
-
 my_lib.mswasm: lib.c lib.h
-	$(MSWASM_CC) --target=wasm32-wasi --sysroot $(MSWASM_SYSROOT) $(RLBOX_ROOT)/c_src/wasm2c_sandbox_wrapper.c -c -o mswasm_sandbox_wrapper.o
-	$(MSWASM_CC) --target=wasm32-wasi --sysroot $(MSWASM_SYSROOT) lib.c mswasm_sandbox_wrapper.o -o $@  
+	$(C_TO_MSWASM) $(RLBOX_ROOT)/c_src/wasm2c_sandbox_wrapper.c -c -o mswasm_sandbox_wrapper.o
+	$(C_TO_MSWASM) lib.c mswasm_sandbox_wrapper.o -o $@  
 
 my_lib.mswasm.c: my_lib.mswasm
 	$(RWASM) $(RWASM_FLAGS) my_lib.mswasm  my_lib.mswasm
 
-# my_lib_wasm2c.so: my_lib.wasm.c 
-# 	$(CC) -I$(WASM2C_ROOT) -shared -fPIC -O3 my_lib.wasm.c -o my_lib.so  $(WASM2C_ADDINS)
 my_lib_mswasm_cheri.so: my_lib.mswasm.c 
 	$(MORELLO_CC) $(MORELLO_CFLAGS) $(MORELLO_PURE_FLAGS) -lm --shared -fPIC my_lib.mswasm.c -o $@
 
