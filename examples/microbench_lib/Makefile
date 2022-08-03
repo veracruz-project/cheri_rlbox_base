@@ -31,7 +31,7 @@ $(OUTDIR)/my_lib_native.so: lib.c lib.h dir
 
 
 $(OUTDIR)/microbenchmarks_wasm2c: $(OUTDIR)/my_lib_wasm2c.so microbenchmarks.cpp
-	$(CXX) -std=c++17 -DWASM2C_SANDBOX microbenchmarks.cpp -o $@ $(RLBOX_INCLUDES) $(WASM2C_INCLUDES) $(RLBOX_FLAGS)
+	$(CXX) -std=c++17 -DWASM2C_SANDBOX microbenchmarks.cpp -ferror-limit=100 -o $@ $(RLBOX_INCLUDES) $(WASM2C_INCLUDES) $(RLBOX_FLAGS)
 
 $(OUTDIR)/microbenchmarks_noop: build/my_lib.o microbenchmarks.cpp
 	$(CXX) -std=c++17 -DNOOP_SANDBOX microbenchmarks.cpp $< -o $@ $(RLBOX_INCLUDES) $(WASM2C_INCLUDES) $(RLBOX_FLAGS)
